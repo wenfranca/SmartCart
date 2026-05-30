@@ -711,16 +711,29 @@ function normalizarNome(nome) {
     'racao': ['racao','rac','keldog','pedigree'],
   };
 
-  // Tenta match no mapa
-  for (const [canonical, aliases] of Object.entries(mapa)) {
-    if (aliases.some(a => s.includes(a) || a.includes(s.split(' ')[0]))) {
-      return canonical;
+  // Match no mapa: o alias precisa aparecer como PALAVRA(S) INTEIRA(S),
+  // não como simples substring. Isso evita que "cer" (de CER.CAP.SEN.PIL)
+  // case com "cerveja" e funda produtos diferentes no mesmo grupo.
+  const tokens = s.split(' ').filter(Boolean);
+  const aliasBate = (a) => {
+    const at = a.split(' ').filter(Boolean);
+    if (!at.length) return false;
+    if (at.length === 1) return tokens.includes(at[0]);          // palavra única
+    for (let i = 0; i + at.length <= tokens.length; i++) {        // frase: tokens consecutivos
+      if (at.every((t, j) => tokens[i + j] === t)) return true;
     }
+    return false;
+  };
+  for (const [canonical, aliases] of Object.entries(mapa)) {
+    if (aliases.some(aliasBate)) return canonical;
   }
 
-  // Retorna primeira palavra significativa
-  const palavras = s.split(' ').filter(p => p.length > 3);
-  return palavras[0] || s.split(' ')[0] || s;
+  // Sem match no mapa: usa a primeira palavra significativa (>3 letras).
+  // Se NÃO houver nenhuma palavra significativa (só siglas curtas, ex.:
+  // "cer cap sen pil"), usa o nome limpo INTEIRO como chave — assim produtos
+  // distintos não são fundidos só por compartilharem a primeira sigla.
+  const palavras = tokens.filter(p => p.length > 3);
+  return palavras[0] || s || nome.toLowerCase().trim();
 }
 
 // Constrói mapa de grupos genéricos a partir do DATA
@@ -768,32 +781,54 @@ function buildGruposGenericos() {
   return grupos;
 }
 
+// ── Parâmetros da análise de recorrência ──
+const JANELA_DIAS       = 120; // janela de análise: ~4 meses
+const MIN_COMPRAS_JANELA = 3;  // mín. de compras DENTRO da janela p/ ser recorrente
+
 function calcularAnalise(generico, grupo) {
   const { datas, lastPrice, unidade, catId, displayName } = grupo;
 
-  // Exige pelo menos 3 compras — com 3+ datas temos 2+ intervalos para média confiável
-  if (datas.length < 3) return null;
+  // Precisa de pelo menos 2 datas p/ existir 1 intervalo
+  if (datas.length < 2) return null;
 
   const hoje = new Date();
   const ultimaCompra = datas[datas.length - 1];
   const diasDesdeUltima = Math.floor((hoje - ultimaCompra) / 86400000);
   const totalCompras = datas.length;
 
-  // Calcula intervalo médio REAL entre todas as compras consecutivas
+  // ── Janela de 4 meses a partir de hoje ──
+  const limiteJanela = new Date(hoje.getTime() - JANELA_DIAS * 86400000);
+  const datasJanela = datas.filter(d => d >= limiteJanela);
+  const comprasPeriodo = datasJanela.length; // quantas vezes comprou em 4 meses
+
+  // FILTRO DE RECORRÊNCIA:
+  // item comprado poucas vezes na janela (ex.: 1x a cada 3 meses) NÃO é
+  // recorrente e fica de fora da sugestão.
+  if (comprasPeriodo < MIN_COMPRAS_JANELA) return null;
+
+  // Intervalos (em dias) entre todas as compras consecutivas
   const intervalos = [];
   for (let i = 1; i < datas.length; i++) {
     const diff = (datas[i] - datas[i-1]) / 86400000;
     if (diff > 0 && diff < 365) intervalos.push(diff);
   }
-
   if (!intervalos.length) return null;
 
-  // Média simples dos intervalos reais — sem fallback de categoria
-  const intervaloMedio = Math.round(
-    intervalos.reduce((s, v) => s + v, 0) / intervalos.length
-  );
-
+  // ── MÉDIA PONDERADA POR RECÊNCIA ──
+  // Intervalos mais recentes pesam mais (peso linear crescente):
+  // o intervalo mais novo tem peso = n; o mais antigo, peso = 1.
+  // Assim a previsão acompanha o ritmo de compra ATUAL, não o histórico antigo.
+  let somaPond = 0, somaPesos = 0;
+  intervalos.forEach((iv, idx) => {
+    const peso = idx + 1;            // idx 0 = mais antigo
+    somaPond  += iv * peso;
+    somaPesos += peso;
+  });
+  const intervaloMedio = Math.round(somaPond / somaPesos);
   if (intervaloMedio < 1) return null;
+
+  // Frequência média na janela (compras a cada ~30 dias)
+  const freqMensal = +(comprasPeriodo / (JANELA_DIAS / 30)).toFixed(1);
 
   const pctVencido = diasDesdeUltima / intervaloMedio;
 
@@ -801,6 +836,11 @@ function calcularAnalise(generico, grupo) {
   if (pctVencido >= 1.2)      { urgencia = 'urgent'; badge = 'URGENTE'; }
   else if (pctVencido >= 0.8) { urgencia = 'warn';   badge = 'ATENÇÃO'; }
   else                         { urgencia = 'ok';     badge = 'OK'; }
+
+  // Score de prioridade: vencimento × peso da frequência.
+  // Itens comprados mais vezes na janela sobem na lista, evitando que itens
+  // raros (mas "vencidos") apareçam acima dos recorrentes de verdade.
+  const score = pctVencido * (1 + Math.log10(1 + comprasPeriodo));
 
   return {
     generico,
@@ -813,6 +853,9 @@ function calcularAnalise(generico, grupo) {
     diasDesdeUltima,
     intervaloMedio,
     totalCompras,
+    comprasPeriodo,
+    freqMensal,
+    score,
     ultimaCompra: ultimaCompra.toLocaleDateString('pt-BR'),
     pctVencido,
   };
@@ -826,7 +869,7 @@ function renderSugestao() {
     <div class="sug-header">
       <div>
         <div class="sug-title">✦ SUGESTÃO INTELIGENTE</div>
-        <div class="sug-subtitle">Baseado 100% no seu histórico real · mín. 3 compras por produto</div>
+        <div class="sug-subtitle">Janela de 4 meses · média ponderada por recência · mín. 3 compras no período</div>
       </div>
       <button class="sug-close" onclick="toggleSugestao()">✕</button>
     </div>
@@ -842,7 +885,7 @@ function renderSugestao() {
       .filter(Boolean)
       .sort((a, b) => {
         const ordem = { urgent:0, warn:1, ok:2 };
-        return ordem[a.urgencia] - ordem[b.urgencia] || b.pctVencido - a.pctVencido;
+        return ordem[a.urgencia] - ordem[b.urgencia] || b.score - a.score;
       });
 
     if (!resultados.length) {
@@ -858,7 +901,7 @@ function renderSugestao() {
     const cat = (catId) => LISTA_CATS.find(c => c.id === catId) || {emoji:'📦', name:'Outros'};
 
     const cicloLabel = (r) =>
-      `ciclo ~${r.intervaloMedio}d · ${r.totalCompras}× comprado`;
+      `ciclo ~${r.intervaloMedio}d · ${r.comprasPeriodo}× em 4 meses`;
 
     const buildItems = (list) => list.map(r => {
       // Usa generico como ID para marcar na lista
