@@ -395,37 +395,50 @@ Chart.register(ChartDataLabels);
 // ══ LISTA DE COMPRAS ══
 // ════════════════════════════════════════════════════
 
-// Categorias base (mapeamento de palavras-chave → categoria)
+// Categorias (8 + Outros/Pet). A classificacao real e feita por classifyId(),
+// logo abaixo: as regras ordenadas vivem la, nao nos kw.
 const LISTA_CATS = [
-  { id:'flv_veg', emoji:'🥬', name:'FLV — Verduras e Legumes',
-    kw:['alface','couve','brocolis','espinafre','tomate','cebola','alho','cenoura','batata','baroa','abobrinha','pimentao','pepino','beterraba','chuchu','inhame','repolho','abacate','agriao','rucola','salsao','salsa','cebolinha','manjericao','hortela','alho poro','mandioca','aipim','inhame','jiló','quiabo','couve-flor','broto','couve de bruxelas','ervilha fresca'] },
-  { id:'flv_fru', emoji:'🍎', name:'FLV — Frutas',
-    kw:['banana','maca','laranja','mamao','limao','abacaxi','uva','melancia','melao','manga','maracuja','pera','morango','goiaba','caju','kiwi','mexerica','tangerina','ameixa','figo','framboesa','mirtilo','acerola','pitanga','graviola','ata','carambola','jaca','siriguela','umbu','caqui','nectarina'] },
-  { id:'padaria', emoji:'🍞', name:'Padaria',
-    kw:['pao','biscoito','bolo','torrada','croissant','wafer','rosca','broa','tapioca','cuscuz','chipa','paes'] },
-  { id:'acougue', emoji:'🥩', name:'Açougue — Carnes',
-    kw:['frango','carne','file','filé','costela','picanha','alcatra','contrafile','patinho','acem','acem','musculo','musculo','coxao','maminha','rabada','ossobuco','pernil','lombo','bisteca','hamburguer','linguica','linguiça','salsicha','mortadela','copa','bacon','paio','buchada','tripas','feijoada','charque','charqueada','coxa','sobrecoxa','asa','peito frango','pe frango','coxa frango','asa frango','carneiro','cordeiro','pato','codorna'] },
-  { id:'frios', emoji:'🧀', name:'Frios e Embutidos',
-    kw:['presunto','peito de peru','salame','salaminho','queijo','mussarela','muçarela','prato','coalho','colonial','provolone','brie','gorgonzola','ricota','requeijao','requeijão','cream cheese','fatiado','defumado','copa','presunto cozido','fiambre','pepperoni','calabresa'] },
-  { id:'laticinios', emoji:'🥛', name:'Laticínios',
-    kw:['leite','iogurte','iogurt','manteiga','margarina','creme de leite','nata','coalhada','kefir','bebida lactea','leite condensado','doce de leite','leite em po','farinha lactea'] },
-  { id:'mercearia', emoji:'🥫', name:'Mercearia',
-    kw:['arroz','feijao','feijão','lentilha','grao','grão','macarrao','macarrão','farinha','amido','polvilho','fuba','fubá','canjica','canjiquinha','quirera','aveia','granola','cereal','flocos','milho','soja','proteina','azeite','oleo','óleo','vinagre','molho','extrato','ketchup','mostarda','maionese','shoyu','pimenta','sal','acucar','açúcar','melado','mel','rapadura','palmito','azeitona','alcaparra','atum','sardinha','bacalhau','camarao','camarão','lagosta','polvo','lula','milho verde','ervilha','vagem','grão de bico','amendoim','castanha','nozes','ameixa seca','uva passa'] },
-  { id:'cafemanha', emoji:'☕', name:'Café da Manhã / Snacks',
-    kw:['cafe','café','achocolatado','nescau','ovomaltine','cha','chá','capuccino','cacao','granola','geleia','doce','mel','barra','snack','pipoca','chips','bala','chiclete','chocolate','paçoca','cocada','cocada','amendoim','castanha do para','castanha de caju','mix de nuts'] },
-  { id:'congelados', emoji:'🥶', name:'Congelados',
-    kw:['congelado','nugget','empanado','lasanha','pizza','hamburguer congelado','peixe congelado','legume congelado','fruta congelada','polpa','suco congelado','sorbet','sorvete'] },
-  { id:'bebidas', emoji:'🧃', name:'Bebidas',
-    kw:['agua','agua','gatorade','powerade','isotonic','suco','refri','refrigerante','coca','pepsi','guarana','fanta','sprite','cerveja','heineken','stella','brahma','skol','antarctica','chopp','vinho','espumante','prosecco','champagne','whisky','vodka','gin','rum','cachaça','cachaca','energetico','red bull','monster','nescau liquido','leite de coco','agua de coco','kombucha','kefir','yakult'] },
-  { id:'limpeza', emoji:'🧼', name:'Limpeza',
-    kw:['detergente','esponja','sabao','sabão','amaciante','sanitario','sanitário','agua sanitaria','desinfetante','limpador','multiuso','desentupidor','limpa','cif','omo','ariel','ace','tide','vanish','pinho','sol','soda','cloro','inseticida','formicida','mata rato','raticida','saco de lixo','sacola','pano','flanela','rodo','vassoura','esfregao','esfreg','bucha','palha de aco','luvas','borracha'] },
-  { id:'higiene', emoji:'🧴', name:'Higiene Pessoal',
-    kw:['papel higienico','papel toalha','absorvente','fralda','sabonete','shampoo','condicionador','creme dental','pasta de dente','escova','dental','fio dental','enxaguante','desodorante','antitranspirante','perfume','loção','creme hidratante','protetor solar','repelente','algodao','algodão','curativo','band aid','remov','esmalte','acetona','maquiagem','base','batom','mascara cil','cotonete','pomada','bebe','baby','lenço','lenco'] },
-  { id:'pet', emoji:'🐾', name:'Pet',
-    kw:['racao','ração','pet','keldog','pedigree','whiskas','golden','hills','caes','gatos','passaro','hamster','aquario','ossinho','petisco animal','brinquedo pet'] },
-  { id:'outros', emoji:'📦', name:'Outros',
-    kw:[] }
+  { id:'mercearia',  emoji:'🥫', name:'Mercearia', kw:[] },
+  { id:'bebidas',    emoji:'🧃', name:'Bebidas', kw:[] },
+  { id:'hortifruti', emoji:'🥬', name:'Hortifruti', kw:[] },
+  { id:'acougue',    emoji:'🥩', name:'Açougue', kw:[] },
+  { id:'padaria',    emoji:'🍞', name:'Padaria', kw:[] },
+  { id:'limpeza',    emoji:'🧼', name:'Limpeza', kw:[] },
+  { id:'higiene',    emoji:'🧴', name:'Higiene e beleza', kw:[] },
+  { id:'frios',      emoji:'🧀', name:'Frios, laticínios e Bombonière', kw:[] },
+  { id:'outros',     emoji:'📦', name:'Outros / Pet', kw:[] }
 ];
+
+// ── Classificador (regras ordenadas; o 1º keyword que casar vence) ──
+// Validado contra o historico real. Devolve o id de uma categoria de LISTA_CATS.
+function classifyNorm(s){
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[._/]/g,' ').replace(/\s+/g,' ').trim();
+}
+const _CLS_RULES = [
+  ['outros', ['racao','rac caeg','rac ped','keldog','pilha','vela ','jg xic','xic lilly','queijeira','band al','saco al dul']],
+  ['limpeza', ['detergente','det liq','lava louca','l rou liq','lava roupa','l p uau','kit limp','limp casa flor','limp ','limpador','amaciante','amac r','amac ','agua san','desin','des barra','sap cif','sapolio','inset','sbp','ped san','pedra san','gel ad san','essen casaflor','essen aromatec','aromatec','casaflor','saco lixo','saco free','saco l b','flanela','bucha','esp asso','esponja','filme pvc','filme','toalha pap','toal pap','t pap','guard']],
+  ['higiene', ['cr dent','creme dent','remov b ac','removin','remov ','papel hig','pap h pers','pap h','p hig','cr trat','skala','es al ab']],
+  ['mercearia', ['bat palh','milh vde','mil vd','milho verde','uva pas','ovos','ovo ','l con moca','leite condens','far lac','farinha lac','farinha pao','filtro pap','coco ral','lei coc','leite coco','polpa','pol bras','pol fr bras','tapioca','azeit vde f fat','az vde','az fat v','az v s','azeitona','bis sal','cl s o','cream cracker']],
+  ['padaria', ['pao ','pao franc','pao fr ass','pao for','pao hamb','pao qjo','pao doce','pao mila','pao fo','chipa','torr baudu','torrada','bisn','bisnaguinha']],
+  ['frios', ['presunto','pres perdigao','pres ','mortad','salame','salaminho','bacon','baconil','lombo can','qjo','queijo','muss','mussarela','coalho','qu p aleg','p aleg mus','mus fat','mus lac','mus gar','req c lig','req ita','req p al','mist req','requeij','iog','iorgute','iogurte','lei ferm','leite ferm','leit l v','lei l v','cr le','cr lei','creme de leite','mant itam','manteiga','pto fgo','coz fat']],
+  ['acougue', ['fgo','frango','pe fr','asa fgo','asa fr','coxa','sobrecoxa','sob fg','coxin','file p fgo','fi pe fg','filez','filezinho','fgo pif','bov','acem','patinho','musc','musculo','pa bov','rabada','alcatra','costela','cost sui','cost su','cost ','pernil','per su','file mignon','mignon','file mig','file tilap','tilap','salsicha','salsi','sals ','ling','linguica','hamb','h pock','hot pock','char 2001','charque']],
+  ['bebidas', ['ag min','agua min','ag ton','agua ton','agua coco','ag coc','ag co','ga berry','gatorade','gator','isot','red bull','r bull','energ','beb en','refri','refr','r cola','c cola','pep bla','pepsi','coca','sprite','re sprite','cerv','cer ','cerveja','stella','antar','cap sen','pil600','vinho','vh ','beb mista','d val','beb soj','beb ades','ades']],
+  ['frios', ['lays','bat ch','bat chips','batatiss','bat feita','chips','salg ','salgad','gulao','chi fan','con dis dori','dori','fandango','pip doce','pipoca','bala ','pirul','goma masc','chiclete','choc','amen ','amendoim','amen pa','cast caju','castanha','cast ','ban ch','banana chip','acaiz','ralinho','car rec sort','biscoito','bisc','bis ','wafer','waffer','maizena','maiz','papa ovo']],
+  ['hortifruti', ['pera','melao','mamao','laranja','lar pera','maca','manga','melancia','mexerica','pokan','abacate','goiaba','banana','bananamaca','limao','maracuja','tomate','tomatel','cebola','cebolinha','alho','cenoura','batata ing','bat inglesa','batata asterix','batata aster','batata d roxa','mandioca','baroa','pimentao','pim verde','pim verm','beterraba','repolho','chuchu','berinjela','abobora','espin','agriao','alface','salsa','couve','hortela','manjericao','alecrim','mor con','morango']]
+];
+const _CLS_MERCEARIA = ['arroz','arr ag','feij','fei verm','lentilha','macarrao','mac s am','mac ins','farinha','amido','glacucar','fuba','canjiq','canjica','acucar','oleo','azeite','vinag','mol ','molh','mol tom','mol heinz','catchup','ketchup','sazon','tempero','temp maggi','faro pr','farofa','cafe','filtro pap','acho','cha ','ferm po','fermento','sard','sardinha','palmito','ameixa calda','mist ita choc','m bo vilma','m bolo','amen','pal dent','coco','leite coco','ovos','ovo'];
+function classifyId(label){
+  const n = classifyNorm(label);
+  if (!n) return 'mercearia';
+  if (n.includes('lasan')) return 'mercearia';
+  for (const [id, keys] of _CLS_RULES){
+    for (const k of keys){ if (n.includes(k)) return id; }
+  }
+  for (const k of _CLS_MERCEARIA){ if (n.includes(k)) return 'mercearia'; }
+  return 'mercearia';
+}
 
 // Estado da lista (em memória — sem localStorage pois artifacts não suportam)
 let LISTA_STATE = {
@@ -451,8 +464,7 @@ function buildListaFromData() {
     freq[k].unidade = r.unidade || freq[k].unidade;
   });
 
-  // Classifica cada produto em uma categoria
-  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  // Classifica cada produto em uma categoria (via classifyId)
   const catItems = {};
   LISTA_CATS.forEach(c => catItems[c.id] = []);
 
@@ -460,17 +472,8 @@ function buildListaFromData() {
     .filter(p => p.count >= 1)
     .sort((a, b) => b.count - a.count)
     .forEach(prod => {
-      const nLabel = norm(prod.label);
-      let matched = false;
-      for (const cat of LISTA_CATS) {
-        if (cat.id === 'outros') continue;
-        if (cat.kw.some(kw => nLabel.includes(norm(kw)))) {
-          catItems[cat.id].push(prod);
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) catItems['outros'].push(prod);
+      const id = classifyId(prod.label);
+      (catItems[id] || catItems['mercearia']).push(prod);
     });
 
   // Salva no estado como itens gerados do histórico
@@ -629,9 +632,8 @@ function laddItem(catId) {
 
 // Ciclos padrão por categoria (fallback quando há poucos dados)
 const CICLO_CAT = {
-  flv_veg:4, flv_fru:5, padaria:4, acougue:7, frios:8,
-  laticinios:7, mercearia:21, cafemanha:14, congelados:21,
-  bebidas:7, limpeza:30, higiene:30, pet:14, outros:14,
+  hortifruti:5, padaria:4, acougue:7, frios:8,
+  mercearia:21, bebidas:7, limpeza:30, higiene:30, outros:21
 };
 
 let sugVisible = false;
@@ -748,15 +750,8 @@ function buildGruposGenericos() {
     const data = parseDataBR(r.data);
     if (!data || isNaN(data)) return;
 
-    // Descobre categoria
-    const nDesc = r.desc.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    let catId = 'outros';
-    for (const cat of LISTA_CATS) {
-      if (cat.id === 'outros') continue;
-      if (cat.kw.some(kw => nDesc.includes(kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')))) {
-        catId = cat.id; break;
-      }
-    }
+    // Descobre categoria (via classifyId)
+    const catId = classifyId(r.desc);
 
     if (!grupos[generico]) {
       grupos[generico] = {
